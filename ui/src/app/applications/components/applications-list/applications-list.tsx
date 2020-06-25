@@ -25,7 +25,6 @@ const APP_FIELDS = [
     'metadata.name',
     'metadata.annotations',
     'metadata.labels',
-    'metadata.resourceVersion',
     'metadata.creationTimestamp',
     'metadata.deletionTimestamp',
     'spec',
@@ -36,40 +35,28 @@ const APP_FIELDS = [
     'status.operationState.operation.sync',
     'status.summary'
 ];
-const APP_LIST_FIELDS = APP_FIELDS.map(field => `items.${field}`);
 const APP_WATCH_FIELDS = ['result.type', ...APP_FIELDS.map(field => `result.application.${field}`)];
 
 function loadApplications(): Observable<models.Application[]> {
-    return Observable.fromPromise(services.applications.list([], {fields: APP_LIST_FIELDS})).flatMap(applications =>
-        Observable.merge(
-            Observable.from([applications]),
-            services.applications
-                .watch(null, {fields: APP_WATCH_FIELDS})
-                .map(appChange => {
-                    const index = applications.findIndex(item => item.metadata.name === appChange.application.metadata.name);
-                    if (index > -1 && appChange.application.metadata.resourceVersion === applications[index].metadata.resourceVersion) {
-                        return {applications, updated: false};
-                    }
-                    switch (appChange.type) {
-                        case 'DELETED':
-                            if (index > -1) {
-                                applications.splice(index, 1);
-                            }
-                            break;
-                        default:
-                            if (index > -1) {
-                                applications[index] = appChange.application;
-                            } else {
-                                applications.unshift(appChange.application);
-                            }
-                            break;
-                    }
-                    return {applications, updated: true};
-                })
-                .filter(item => item.updated)
-                .map(item => item.applications)
-        )
-    );
+    const applications = new Array<models.Application>();
+    return services.applications.watch(null, {fields: APP_WATCH_FIELDS}).map(appChange => {
+        const index = applications.findIndex(item => item.metadata.name === appChange.application.metadata.name);
+        switch (appChange.type) {
+            case 'DELETED':
+                if (index > -1) {
+                    applications.splice(index, 1);
+                }
+                break;
+            default:
+                if (index > -1) {
+                    applications[index] = appChange.application;
+                } else {
+                    applications.unshift(appChange.application);
+                }
+                break;
+        }
+        return applications;
+    });
 }
 
 const ViewPref = ({children}: {children: (pref: AppsListPreferences & {page: number; search: string}) => React.ReactNode}) => (
