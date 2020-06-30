@@ -6,7 +6,9 @@ ARG BASE_IMAGE=debian:10-slim
 ####################################################################################################
 FROM golang:1.14.1 as builder
 
-RUN echo 'deb http://deb.debian.org/debian buster-backports main' >> /etc/apt/sources.list
+ADD hack/Zscaler.pem /tmp
+RUN cat /etc/ssl/certs/ca-certificates.crt /tmp/Zscaler.pem > /etc/ssl/certs/ca-certificates.crt && \
+    echo 'deb http://deb.debian.org/debian buster-backports main' >> /etc/apt/sources.list
 
 RUN apt-get update && apt-get install -y \
     openssh-server \
@@ -52,7 +54,7 @@ RUN groupadd -g 999 argocd && \
     apt-get update && \
     apt-get install -y git git-lfs python3-pip tini gpg && \
     apt-get clean && \
-    pip3 install awscli==1.18.80 && \
+    pip3 install  --trusted-host pypi.org --trusted-host files.pythonhosted.org awscli==1.18.80 && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 COPY hack/git-ask-pass.sh /usr/local/bin/git-ask-pass.sh
@@ -70,7 +72,7 @@ COPY uid_entrypoint.sh /usr/local/bin/uid_entrypoint.sh
 # support for mounting configuration from a configmap
 RUN mkdir -p /app/config/ssh && \
     touch /app/config/ssh/ssh_known_hosts && \
-    ln -s /app/config/ssh/ssh_known_hosts /etc/ssh/ssh_known_hosts 
+    ln -s /app/config/ssh/ssh_known_hosts /etc/ssh/ssh_known_hosts
 
 RUN mkdir -p /app/config/tls
 RUN mkdir -p /app/config/gpg/source && \
@@ -92,7 +94,9 @@ FROM node:11.15.0 as argocd-ui
 WORKDIR /src
 ADD ["ui/package.json", "ui/yarn.lock", "./"]
 
-RUN yarn install
+ADD hack/Zscaler.pem /tmp
+RUN cat /etc/ssl/certs/ca-certificates.crt /tmp/Zscaler.pem > /etc/ssl/certs/ca-certificates.crt && \
+    yarn config set "strict-ssl" false -g && yarn install
 
 ADD ["ui/", "."]
 
@@ -112,7 +116,9 @@ WORKDIR /go/src/github.com/argoproj/argo-cd
 COPY go.mod go.mod
 COPY go.sum go.sum
 
-RUN go mod download
+ADD hack/Zscaler.pem /tmp
+RUN cat /etc/ssl/certs/ca-certificates.crt /tmp/Zscaler.pem > /etc/ssl/certs/ca-certificates.crt && \
+    go mod download
 
 # Perform the build
 COPY . .

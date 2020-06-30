@@ -23,7 +23,7 @@ case $ARCHITECTURE in
         DL=$DOWNLOADS/kustomize-${KUSTOMIZE_VERSION}
         URL=https://github.com/kubernetes-sigs/kustomize/releases/download/v${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_$ARCHITECTURE
         BINNAME=kustomize2
-        [ -e $DL ] || curl -sLf --retry 3 -o $DL $URL
+        [ -e $DL ] || curl -ksLf --retry 3 -o $DL $URL
         mv $DL $BIN/$BINNAME
         ;;
       *)
@@ -31,7 +31,7 @@ case $ARCHITECTURE in
         URL=https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_$ARCHITECTURE.tar.gz
         BINNAME=kustomize
 
-        [ -e $DL ] || curl -sLf --retry 3 -o $DL $URL
+        [ -e $DL ] || curl -ksLf --retry 3 -o $DL $URL
         tar -C /tmp -xf $DL
         mv /tmp/kustomize $BIN/$BINNAME
         ;;
